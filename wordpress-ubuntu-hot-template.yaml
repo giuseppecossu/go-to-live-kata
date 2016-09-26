@@ -1,0 +1,221 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This Heat template installs a single instance WordPress on Ubuntu 14.04
+  using a local Apache and MySQL database to store the data.
+  It requires a pre-created keypair, an Ubuntu 14.04 image
+  and the id of the public network.
+
+  REQUIRED PARAMETERS:
+  key_name, image_id, public_network_id
+
+  #Created by: Giuseppe Cossu 25/09/2016
+
+parameters:
+
+  wordpress_version:
+    type: string
+    description: Select Wordpress version to install
+    default: latest
+    constraints:
+      - allowed_values: [ latest, wordpress-4.6.1, wordpress-4.5.4, wordpress-4.5, wordpress-4.4.5, wordpress-4.4, wordpress-4.3 ]
+  key_name:
+    type: string
+    description: Name of a KeyPair to enable SSH access to the instance
+    default: vagrant
+  instance_type:
+    type: string
+    label: Instance Type
+    description: Instance type for WordPress server
+    default: m1.small2
+    constraints:
+      - allowed_values: [ m1.small2, m1.small, m1.medium ]
+  image_id:
+    type: string
+    description: Name or ID of the image to use for the WordPress server.
+    default: Ubuntu-14.04-x64
+  public_network_id:
+    type: string
+    label: Public Network
+    default: 7759e58d-0b4f-4abc-b3b1-4968a97cb8a3
+    description: Name or Id of the public network.
+  dns_nameserver:
+    type: comma_delimited_list
+    label: DNS Name Server
+    description: DNS nameserver(s)
+    default: 8.8.8.8,8.8.4.4
+
+  db_name:
+    type: string
+    description: WordPress database name
+    default: wordpress
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_name must begin with a letter and contain only alphanumeric
+          characters
+  db_username:
+    type: string
+    description: The WordPress database admin account username
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 16 }
+        description: db_username must be between 1 and 16 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_username must begin with a letter and contain only alphanumeric
+          characters
+  db_password:
+    type: string
+    description: The WordPress database admin account password
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 41 }
+        description: db_password must be between 1 and 41 characters
+      - allowed_pattern: '[a-zA-Z0-9]*'
+        description: db_password must contain only alphanumeric characters
+  db_root_password:
+    type: string
+    description: Root password for MySQL
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 41 }
+        description: db_root_password must be between 1 and 41 characters
+      - allowed_pattern: '[a-zA-Z0-9]*'
+        description: db_root_password must contain only alphanumeric characters
+
+resources:
+# create a specific web security group that routes just web and ssh traffic
+  web_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Application specific security group that passes ports 22 and 80
+      name: web_security_group
+      rules:
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+# create a private network/subnet for the web servers
+  web_private_network:
+    type: OS::Neutron::Net
+    properties:
+      name: Web_Tier_private_network
+  web_private_network_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      cidr: 192.168.100.0/24
+      network: { get_resource: web_private_network }
+      name: Web_Tier_private_subnet
+      dns_nameservers: { get_param: dns_nameserver }
+      enable_dhcp: true
+# create a router between the public/external network and the web network
+  public_router:
+    type: OS::Neutron::Router
+    properties:
+      name: PublicWebRouter
+      external_gateway_info:
+        network: { get_param: public_network_id }
+
+# attach the web private network to the public router
+  public_router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: public_router }
+      subnet: { get_resource: web_private_network_subnet }
+# Create a VIP port
+  instance_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: web_private_network }
+      security_groups: [{ get_resource: web_security_group }]
+      fixed_ips:
+        - subnet_id:  { get_resource: web_private_network_subnet }
+#  Floating_IP:
+  Web_Network_Floating_IP:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: public_network_id}
+#  Associate the Floating IP:
+  association:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: Web_Network_Floating_IP }
+      port_id: { get_resource: instance_port }
+  wordpress_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image_id }
+      flavor: { get_param: instance_type }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: instance_port }
+      security_groups: [{ get_resource: web_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+            #use apt-get for Debian/ubuntu
+            apt-get update -y
+            apt-get upgrade -y
+
+            #allow noninteractive mysql installation
+            export DEBIAN_FRONTEND=noninteractive 
+            #Install PHP5, and mysql
+            apt-get -y install apache2 php5 libapache2-mod-php5 php5-mysql php5-gd mysql-client mysql-server
+
+            # Setup MySQL root password
+            mysqladmin -u root password db_rootpassword
+            # create wordpress database and user
+            cat << EOF | mysql -u root --password=db_rootpassword
+            CREATE DATABASE db_name;
+            CREATE USER db_user@localhost IDENTIFIED BY 'db_password';
+            GRANT ALL PRIVILEGES ON db_name.* TO db_user@localhost;
+            FLUSH PRIVILEGES;
+            exit
+            EOF
+
+            # download wordpress
+            wget http://wordpress.org/wordpress_version.tar.gz
+            tar -xzf wordpress_version.tar.gz
+
+            # configure wordpress
+            cp wordpress/wp-config-sample.php wordpress/wp-config.php
+            sed -i 's/database_name_here/db_name/' wordpress/wp-config.php
+            sed -i 's/username_here/db_user/' wordpress/wp-config.php
+            sed -i 's/password_here/db_password/' wordpress/wp-config.php
+            #sed -i 's/localhost/$db_server_ip/' wordpress/wp-config.php
+
+            # install a copy of the configured wordpress into apache's www directory
+            cp -R wordpress /var/www/html/
+
+            # give apache ownership of the application files
+            chown -R www-data:www-data /var/www/html/
+            chown -R apache:apache /var/www/html/
+            chmod -R g+w /var/www/html/
+
+            # restart
+            service apache2 restart
+          params:
+            db_rootpassword: { get_param: db_root_password }
+            db_name: { get_param: db_name }
+            db_user: { get_param: db_username }
+            db_password: { get_param: db_password }
+            wordpress_version: { get_param: wordpress_version }
+
+outputs:
+  WebsiteURL:
+    description: URL for Wordpress
+    value:
+      str_replace:
+        template: http://public_ip/wordpress
+        params:
+          public_ip: { get_attr: [Web_Network_Floating_IP, floating_ip_address] }
+
