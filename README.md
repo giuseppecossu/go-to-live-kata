@@ -26,3 +26,29 @@ You will need to:
 5. We are evaluating solutions based on the architecture and quality of the deployment. Show us just how beautiful, clean and pragmatic your code can be.
 
 6. Once your solution is ready, please send us the link of your project.
+
+Automated solution for an OpenStack platform
+============================================
+
+This solution deploys Wordpress on a simple 1-Tier architecture using an heat template. It includes an Apache server and a Mysql database. It works on Ubuntu 14.04 x86.
+
+-----------------------------------------
+Heat OpenStack Template (HOT) description
+-----------------------------------------
+
+The heat template (wordpress-ubuntu-hot-template.yaml) requires the following parameters:
+ * key_name: you need to create a keypair in your OpenStack environement and provide the keypair name
+ * image_id: you need to provide an Ubuntu 14.04 x64 image name. If not available you need to add it in the glance (OpenStack image service) repository
+ * public_network_id:  you need to provide the id of the external (aka public) network. It is required to create floating IPs.
+
+Optionally the user can specify:
+ * a WordPress version
+ * the MySQL cretentials
+ * the Wordpress db credentials
+
+The template basically creates the following resources:
+ * a private network
+ * a security group allowing access only to ports 22 and 80
+ * a router that connects the private network to the external network
+ * an instance
+ * a floating IP, providing public connectivity
