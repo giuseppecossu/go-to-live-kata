@@ -48,7 +48,7 @@ The heat template (wordpress-ubuntu-hot-template.yaml) requires the following pa
 
 Optionally the user can specify:
  * a WordPress version (you can select the latest 10 versions, https://wordpress.org/download/release-archive/)
-  latest, 4.6.1, 4.6, 4.5.4, 4.5.3, 4.5.2, 4.5.1, 4.5, 4.4.5, 4.4.4, 4.4.3
+  * latest, 4.6.1, 4.6, 4.5.4, 4.5.3, 4.5.2, 4.5.1, 4.5, 4.4.5, 4.4.4, 4.4.3
  * the MySQL cretentials
  * the WordPress db credentials
 
