@@ -74,7 +74,9 @@ On the stack output you can find the WordPress URL and check the installation.
 Setup OpenStack CLI and run a simple test
 -----------------------------------------
 
-In this repository you can find two bash scripts
+In this repository you can find two bash scripts:
+
 1. setup_test_environment.sh : it sets up the OpenStack CLI using virtualenv, loads the OpenStack credentials, creates a keypair on OpenStack and add an Ubuntu14.04 image.
+
 2. test_wordpress_template.sh : launch the heat template and check if the Wordpress version is correctly installed.
 
