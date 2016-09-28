@@ -78,8 +78,8 @@ Setup OpenStack CLI and run a simple test
 In this repository you can find two bash scripts:
 
 **setup_test_environment.sh:** it sets up the OpenStack CLI using virtualenv, loads the OpenStack credentials, creates a keypair on OpenStack and add an Ubuntu14.04 image.
- usage: setup_test_environment.sh [[[-k keypairname] [-i imagename]] | [-h]]
+  usage: setup_test_environment.sh [[[-k keypairname] [-i imagename]] | [-h]]
 
 **test_wordpress_template.sh:** launch the heat template and check if the Wordpress version is correctly installed.
- usage: setup_test_environment [[[-t templatefile ] [-k keypairname] [-i imagename] [-w wordpressversion] [-s stackname]] | [-h]]
+  usage: setup_test_environment [[[-t templatefile ] [-k keypairname] [-i imagename] [-w wordpressversion] [-s stackname]] | [-h]]
 
