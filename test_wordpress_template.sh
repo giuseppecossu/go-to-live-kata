@@ -2,10 +2,10 @@
 
 function usage
 {
-    echo "usage: launch_wordpress [[[-t templatefile ] [-k keypairname] [-i imagename] [-w wordpressversion][-s stackname]] | [-h]]"
+    echo "usage: setup_test_environment [[[-t templatefile ] [-k keypairname] [-i imagename] [-w wordpressversion] [-s stackname]] | [-h]]"
 }
 
-# Defaulf values
+# Default values
 templatefile=wordpress-ubuntu-hot-template.yaml
 keypairname=wordpress-key
 imagename=Ubuntu-14.04-x64
@@ -38,27 +38,22 @@ while [ "$1" != "" ]; do
     shift
 done
 
-echo 'Launch Heat Stack using the following paramenters'
-echo 'template file' = $templatefile
-echo 'keypair' = $keypairname
-echo 'image name' = $imagename
-echo 'wordpress version' = $wordpressversion
-echo 'stack name' = $stackname
-echo ''
-
 wordpressparameter=$wordpressversion
-echo 'wordpress-parameter =' $wordpressparameter
+
 #The heat parameter needs "wordpress-" on the downloading url.
 if [ $wordpressversion != 'latest' ]; then
  wordpressparameter=wordpress-$wordpressversion
 fi
 
-echo 'wordpress-parameter =' $wordpressparameter
-
 # Use virtualenv for OpenStack CLI
 source openstack_cli/venv/bin/activate
 # Load OpenStack Credentials
 source openrc
+
+
+echo 'Launching Heat Stack using the following parameters' 
+echo 'heat stack-create -f' $templatefile '-P wordpress_version='$wordpressparameter '-P key_name='$keypairname' -P image_id=$imagename '$stackname '--poll 30'
+echo ''
 
 # Run Heat Template with the required parameters
 heat stack-create -f $templatefile -P wordpress_version=$wordpressparameter -P key_name=$keypairname -P image_id=$imagename $stackname --poll 30
