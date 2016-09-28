@@ -2,7 +2,7 @@
 
 function usage
 {
-    echo "usage: setup_test_environment [[[-t templatefile ] [-k keypairname] [-i imagename] [-w wordpressversion] [-s stackname]] | [-h]]"
+    echo "usage: test_wordpress_template [[[-t templatefile ] [-k keypairname] [-i imagename] [-w wordpressversion] [-s stackname]] | [-h]]"
 }
 
 # Default values
