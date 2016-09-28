@@ -12,24 +12,24 @@ description: >
   #Created by: Giuseppe Cossu 25/09/2016
 
 parameters:
-
+#User can add some data
   wordpress_version:
     type: string
     description: Select a Wordpress version to install
     default: latest
     constraints:
-      - allowed_values: [ latest, wordpress-4.6.1, wordpress-4.5.4, wordpress-4.5, wordpress-4.4.5, wordpress-4.4, wordpress-4.3 ]
+      - allowed_values: [ latest, wordpress-4.6.1, wordpress-4.6, wordpress-4.5.4, wordpress-4.5.3, wordpress-4.5.2, wordpress-4.5.1, wordpress-4.5, wordpress-4.4.5, wordpress-4.4.4, wordpress-4.4.3 ]
   key_name:
     type: string
     description: Name of a keypair to enable SSH access 
-    default: vagrant
+    default: wordpress-key
   instance_type:
     type: string
     label: Flavor
     description: Flavor type for the Wordpress instance
-    default: m1.small2
+    default: m1.small
     constraints:
-      - allowed_values: [ m1.small2, m1.small, m1.medium ]
+      - allowed_values: [ m1.small, m1.medium ]
   image_id:
     type: string
     description: Name or Id of the image to use for the WordPress server
@@ -90,6 +90,14 @@ parameters:
         description: db_root_password must contain only alphanumeric characters
 
 resources:
+  wait_condition:
+    type: OS::Heat::WaitCondition
+    properties:
+      handle: { get_resource: wait_handle }
+      count: 1
+      timeout: 600
+  wait_handle:
+    type: OS::Heat::WaitConditionHandle
   web_security_group:
     type: OS::Neutron::SecurityGroup
     properties:
@@ -195,12 +203,15 @@ resources:
 
             # Restart Apache service
             service apache2 restart
+            # Notify to Heat the installation progess
+            wc_notify --data-binary '{"status": "SUCCESS"}'
           params:
             db_root_password: { get_param: db_root_password }
             db_name: { get_param: db_name }
             db_user: { get_param: db_username }
             db_password: { get_param: db_password }
             wordpress_version: { get_param: wordpress_version }
+            wc_notify: { get_attr: ['wait_handle', 'curl_cli'] }
 
 outputs:
   WebsiteURL:
@@ -210,4 +221,3 @@ outputs:
         template: http://public_ip/wordpress
         params:
           public_ip: { get_attr: [web_network_floating_IP, floating_ip_address] }
-

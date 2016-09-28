@@ -30,7 +30,12 @@ You will need to:
 Automated solution for an OpenStack platform
 ============================================
 
-This solution deploys Wordpress on a simple 1-Tier architecture using an heat template. It includes an Apache server and a Mysql database. It works on Ubuntu 14.04 x86.
+This solution deploys WordPress on a simple 1-Tier architecture using an heat template. It includes an Apache server and a MySQL database. It works on Ubuntu 14.04 x86.
+
+------------
+Requirements
+------------
+To run the following template you need an OpenStack environment with the basic IaaS services, including neutron (OpenStack Networking) and Heat (OpenStack Orchestration).
 
 -----------------------------------------
 Heat OpenStack Template (HOT) description
@@ -42,9 +47,9 @@ The heat template (wordpress-ubuntu-hot-template.yaml) requires the following pa
  * public_network_id:  you need to provide the id of the external (aka public) network. It is required to create floating IPs.
 
 Optionally the user can specify:
- * a WordPress version
+ * a WordPress version (you can select the latest 10 versions, https://wordpress.org/download/release-archive/)
  * the MySQL cretentials
- * the Wordpress db credentials
+ * the WordPress db credentials
 
 The template basically creates the following resources:
  * a private network
@@ -52,3 +57,24 @@ The template basically creates the following resources:
  * a router that connects the private network to the external network
  * an instance
  * a floating IP, providing public connectivity
+
+Moreover the template configure 
+
+----------------------------------
+Running the automated installation
+----------------------------------
+
+To run the template you can:
+1. Use the OpenStack Dashboard, loading the template file into "Orchestration" -> "Stack".
+2. Using the OpenStack CLI: e.g., heat stack-create -f wordpress-ubuntu-hot-template.yaml -P wordpress_version=4.6.1 -P key_name=wordpress-key -P image_id=Ubuntu-14.04-x64 wordpress-stack --poll 30
+
+On the stack output you can find the WordPress URL and check the installation.
+
+-----------------------------------------
+Setup OpenStack CLI and run a simple test
+-----------------------------------------
+
+In this repository you can find two bash scripts
+1. setup_test_environment.sh : it sets up the OpenStack CLI using virtualenv, loads the OpenStack credentials, creates a keypair on OpenStack and add an Ubuntu14.04 image.
+2. test_wordpress_template.sh : launch the heat template and check if the Wordpress version is correctly installed.
+
